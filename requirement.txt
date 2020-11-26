@@ -2,5 +2,7 @@ pip3 install mtcnn
 pip3 install git+https://github.com/rcmalli/keras-vggface.git
 pip3 install tensorflow
 pip3 install keras
+pip3 install imutils
+pip3 install Pillow
 # https://machinelearningmastery.com/how-to-perform-face-recognition-with-vggface2-convolutional-neural-network-in-keras/
 # https://github.com/rcmalli/keras-vggface.git

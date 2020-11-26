@@ -81,14 +81,3 @@ if __name__ == "__main__":
     listface = ["dataset/User.Nghia.1.jpg","dataset/User.Trung.1.jpg"]   
     campareface(listface) 
 
-    # Application MTCNN and VGG16
-
-    # filenames = ["image/2020-11-22-144550.jpg","image/2020-11-22-154729.jpg"]
-
-    # embed = get_embedding(filenames)
-
-    # identify = embed[0]
-    # print("Positive tests")
-    # is_match(identify,embed[1])
-    # print("Negative tests")
-    # is_match(identify,embed[2])
