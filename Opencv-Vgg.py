@@ -10,11 +10,12 @@ from imutils.video import FPS
 import argparse
 from time import time
 import imutils
+import math
 
 
 
 
-def face_identify(modelvgg,net, thresh = 0.5):
+def face_identify(modelvgg,net, threshold_confidence,thresh = 0.4):
     # class model net 
     CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat","bottle", "bus", "car", "cat", "chair", "cow", "diningtable","dog", "horse", "motorbike", "person", "pottedplant", "sheep",	"sofa", "train", "admonitory"]
     COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
@@ -34,7 +35,12 @@ def face_identify(modelvgg,net, thresh = 0.5):
     data_face ,persons = get_dataset()
     pred_dataset = get_embedding(data_face,model)
 
+
+    tracking = False
+    centroid_tracking = 0
     while True:
+        track = {}
+        
         # get frame 
         ret , frame = cam.read()
         t0 = time()
@@ -52,46 +58,58 @@ def face_identify(modelvgg,net, thresh = 0.5):
         # the prediction
             confidence = detections[0, 0, i, 2]
 
-        # if confidence > args["confidence"]:
-          
-            idx = int(detections[0, 0, i, 1])
-            if idx == 15:
-                box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
-                (startX, startY, endX, endY) = box.astype("int")
+            if confidence > threshold_confidence:
+            
+                idx = int(detections[0, 0, i, 1])
+                if idx == 15:
+                    box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+                    (startX, startY, endX, endY) = box.astype("int")
 
-                # draw the prediction on the frame
-                label = "{}: {:.2f}%".format(CLASSES[idx],confidence * 100)
-                cv2.rectangle(frame, (startX, startY), (endX, endY),COLORS[idx], 2) 
-                y = startY - 15 if startY - 15 > 15 else startY + 15
-                cv2.putText(frame, label, (startX, y),font, 0.5, COLORS[idx], 2)
+                    # draw the prediction on the frame
+                    label = "{}: {:.2f}%".format(CLASSES[idx],confidence * 100)
+                    cv2.rectangle(frame, (startX, startY), (endX, endY),COLORS[idx], 2) 
+                    y = startY - 15 if startY - 15 > 15 else startY + 15
+                    cv2.putText(frame, label, (startX, y),font, 0.5, COLORS[idx], 2)
+                    # detection Face in Person
+                    img = frame[startY:endY,startX:endX] 
 
-                # detection Face in Person
-                img = frame[startY:endY,startX:endX] 
+                    faces = facecascade.detectMultiScale( 
+                        img,
+                        scaleFactor = 1.2,
+                        minNeighbors = 5,
+                        minSize = (int(minW),int(minH)),
+                    )
+                    id = "unknown"
+                    
+                    # face recognition 
+                    for (x,y,w,h) in faces:
+                        face = img[y:y+h,x:x+w] # 1
+                        cv2.rectangle(img, (x,y), (x+w,y+h), (0,255,0), 2) # 1
+                        # face = preprocess_face(face)
+                        pred = get_embedding([face],model)
 
-                faces = facecascade.detectMultiScale( 
-                    img,
-                    scaleFactor = 1.2,
-                    minNeighbors = 5,
-                    minSize = (int(minW),int(minH)),
-                )
+                        for index ,emb in enumerate(pred_dataset[:]):
+                            # print(len(pred[:-1]))
+                            score = cosine(emb,pred[0])
+                            if (score < thresh):
+                                id = persons[index]
+                                break
+                            
+                        cv2.putText(img, str(id), (x+5,y-5), font, 1, (255,255,255), 2)
 
-                # face recognition 
-                for (x,y,w,h) in faces:
-                    face = img[y:y+h,x:x+w] # 1
-                    cv2.rectangle(img, (x,y), (x+w,y+h), (0,255,0), 2) # 1
-                    # face = preprocess_face(face)
-                    pred = get_embedding([face],model)
+                    centroid = (int((startX+endX)/2) ,int((startY+endY)/2)) 
+                    if (id == "Nghia"):
+                        tracking = True
+                        centroid_tracking= centroid
 
-                    for index ,emb in enumerate(pred_dataset[:]):
-                        # print(len(pred[:-1]))
-                        score = cosine(emb,pred[0])
-                        if (score < thresh):
-                            id = persons[index]
-                            break
-                        else:
-                            id = "unknown"
-                        
-                    cv2.putText(img, str(id), (x+5,y-5), font, 1, (255,255,255), 2)            
+                    
+                    if tracking == True:
+                        track[centroid] = distance(centroid,centroid_tracking)  
+
+        if tracking == True and track:          
+            keymin = min(track,key = track.get) 
+            cv2.circle(frame,(keymin[0],keymin[1]),radius = 10,color = (0,0,255))  
+            centroid_tracking = keymin
 
         cv2.imshow('Detection and FaceRecognition',frame) 
         print("Execution time: %.4f(s)" % (time() - t0))
@@ -109,7 +127,8 @@ def face_identify(modelvgg,net, thresh = 0.5):
     cam.release()
     cv2.destroyAllWindows()
 
-
+def distance( p , q):
+    return math.sqrt(sum((px - qx) ** 2.0 for px, qx in zip(p, q)))
 
 def preprocess_face(face,required_size =(224,224)):
 
@@ -146,9 +165,9 @@ def get_embedding(bboxfaces,model):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("-p", "--prototxt", required=True,	help="path to Caffe 'deploy' prototxt file")
-    ap.add_argument("-m", "--model", required=True,	help="path to Caffe pre-trained model")
-    ap.add_argument("-c", "--confidence", type=float, default=0.2,	help="minimum probability to filter weak detections")
+    ap.add_argument("-p", "--prototxt",default="MobileNetSSD_deploy.prototxt.txt",	help="path to Caffe 'deploy' prototxt file")
+    ap.add_argument("-m", "--model", default="MobileNetSSD_deploy.caffemodel"	,help="path to Caffe pre-trained model")
+    ap.add_argument("-c", "--confidence", type=float, default=0.5,	help="minimum probability to filter weak detections")
     ap.add_argument("-v", "--video_source", type=int, default=0,	help="video source (default = 0, external usually = 1)")
     args = vars(ap.parse_args())
 
@@ -157,4 +176,4 @@ if __name__ == "__main__":
     net = cv2.dnn.readNetFromCaffe(args["prototxt"], args["model"])
     # create a Vgg face model vgg16, resnet50 , senet50
     model = VGGFace(model = "resnet50",include_top = False, input_shape = (224,224,3)) # 
-    face_identify(model,net)
+    face_identify(model,net,args["confidence"])
