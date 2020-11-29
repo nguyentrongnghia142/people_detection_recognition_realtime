@@ -25,7 +25,7 @@ def face_identify(modelvgg,net, threshold_confidence,thresh = 0.4):
     # font 
     font = cv2.FONT_HERSHEY_SIMPLEX
     print("[INFO] starting video stream...")
-    cam = cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(0) # /dev/video0 
     cam.set(3,640)
     cam.set(4,480)
     minW = 0.1 * cam.get(3)
@@ -37,7 +37,9 @@ def face_identify(modelvgg,net, threshold_confidence,thresh = 0.4):
 
 
     tracking = False
-    centroid_tracking = 0
+    centroid_tracking = None
+    mission = None
+    counter = 0
     while True:
         track = {}
         
@@ -98,18 +100,25 @@ def face_identify(modelvgg,net, threshold_confidence,thresh = 0.4):
                         cv2.putText(img, str(id), (x+5,y-5), font, 1, (255,255,255), 2)
 
                     centroid = (int((startX+endX)/2) ,int((startY+endY)/2)) 
-                    if (id == "Nghia"):
-                        tracking = True
+                    if (id in persons and (mission ==None or mission == id)):
                         centroid_tracking= centroid
+                        mission = id
 
                     
-                    if tracking == True:
+                    if mission != None:
                         track[centroid] = distance(centroid,centroid_tracking)  
 
-        if tracking == True and track:          
+        if tracking != None and track:          
             keymin = min(track,key = track.get) 
             cv2.circle(frame,(keymin[0],keymin[1]),radius = 10,color = (0,0,255))  
             centroid_tracking = keymin
+            coordination(centroid_tracking, frame)
+
+        if not track:
+            counter += 1
+            if counter == 10:
+                mission = None 
+                counter = 0
 
         cv2.imshow('Detection and FaceRecognition',frame) 
         print("Execution time: %.4f(s)" % (time() - t0))
@@ -126,6 +135,18 @@ def face_identify(modelvgg,net, threshold_confidence,thresh = 0.4):
 
     cam.release()
     cv2.destroyAllWindows()
+
+def coordination(centroid, frame):
+    width = frame.shape[1]
+    intervel = (width * 10)/ 100
+    local = 2
+    centroid_left ,centroid_right = width/2 - intervel , width/2 + intervel
+    if centroid[0] < centroid_left:
+        local = 1
+    elif centroid[0] > centroid_right:
+        local = 3
+
+    print("local: %d" % local)
 
 def distance( p , q):
     return math.sqrt(sum((px - qx) ** 2.0 for px, qx in zip(p, q)))
