@@ -8,12 +8,21 @@ import numpy as np
 import os
 from imutils.video import FPS
 import argparse
-from time import time
+import time
 import imutils
 import math
+import freenect
+from serial import Serial
 
+	
 
-
+#The following line is for serial over GPIO
+port = '/dev/ttyUSB'
+for i in range(4):
+    try:
+        arduino = Serial(port+str(i),9600,timeout=5)
+    except:
+        print("error")
 
 def face_identify(modelvgg,net, threshold_confidence,thresh = 0.4):
     # class model net 
@@ -25,13 +34,13 @@ def face_identify(modelvgg,net, threshold_confidence,thresh = 0.4):
     # font 
     font = cv2.FONT_HERSHEY_SIMPLEX
     print("[INFO] starting video stream...")
-    cam = cv2.VideoCapture(0) # /dev/video0 
-    cam.set(3,640)
-    cam.set(4,480)
-    minW = 0.1 * cam.get(3)
-    minH = 0.1 * cam.get(4)
+#     cam = cv2.VideoCapture(0) # /dev/video0 
+#     cam.set(3,640)
+#     cam.set(4,480)
+    minW = 64
+    minH = 48
     # get face database
-    fps = FPS().start()
+#     fps = FPS().start()
     data_face ,persons = get_dataset()
     pred_dataset = get_embedding(data_face,model)
 
@@ -44,8 +53,8 @@ def face_identify(modelvgg,net, threshold_confidence,thresh = 0.4):
         track = {}
         
         # get frame 
-        ret , frame = cam.read()
-        t0 = time()
+        frame = get_video()
+        t0 = time.time()
         frame = imutils.resize(frame,width = 640)
         # img = frame
         
@@ -103,16 +112,19 @@ def face_identify(modelvgg,net, threshold_confidence,thresh = 0.4):
                     if (id in persons and (mission ==None or mission == id)):
                         centroid_tracking= centroid
                         mission = id
-
+                        print(centroid_tracking)
                     
+                    
+                    print(mission)
                     if mission != None:
-                        track[centroid] = distance(centroid,centroid_tracking)  
+                        track[centroid] = distance(centroid,centroid_tracking)
+                        coordination(centroid_tracking, frame) 
 
         if tracking != None and track:          
             keymin = min(track,key = track.get) 
             cv2.circle(frame,(keymin[0],keymin[1]),radius = 10,color = (0,0,255))  
             centroid_tracking = keymin
-            coordination(centroid_tracking, frame)
+          
 
         if not track:
             counter += 1
@@ -121,19 +133,19 @@ def face_identify(modelvgg,net, threshold_confidence,thresh = 0.4):
                 counter = 0
 
         cv2.imshow('Detection and FaceRecognition',frame) 
-        print("Execution time: %.4f(s)" % (time() - t0))
+        print("Execution time: %.4f(s)" % (time.time() - t0))
 
         k = cv2.waitKey(10) & 0xff # Press 'ESC' for exiting video
         if k == 27:
             break
 
-        fps.update()
+#         fps.update()
+# 
+#     fps.stop()
+#     print("[INFO] elapsed time: {:.2f}".format(fps.elapsed()))
+#     print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
 
-    fps.stop()
-    print("[INFO] elapsed time: {:.2f}".format(fps.elapsed()))
-    print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
-
-    cam.release()
+#     cam.release()
     cv2.destroyAllWindows()
 
 def coordination(centroid, frame):
@@ -145,8 +157,18 @@ def coordination(centroid, frame):
         local = 1
     elif centroid[0] > centroid_right:
         local = 3
-
+    sendData(local)
     print("local: %d" % local)
+def sendData(data):
+    arduino.flush()
+    temp = str(data)
+    arduino.write(temp.encode("utf-8"))
+    print("Send data to Arduino: "+temp)
+    #time.sleep(10)
+def get_video():
+    array,_ = freenect.sync_get_video()
+    array = cv2.cvtColor(array,cv2.COLOR_RGB2BGR)
+    return array
 
 def distance( p , q):
     return math.sqrt(sum((px - qx) ** 2.0 for px, qx in zip(p, q)))
