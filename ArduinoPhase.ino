@@ -10,15 +10,15 @@ const int LeftMotorBackward = 9;
 const int RightMotorForward = 7;
 const int RightMotorBackward = 6;
 int checkPeople;
-
+int check;
 int distance;
 
 void setup() {
   // put your setup code here, to run once:
-Serial.begin(9600);     // giao tiếp Serial với baudrate 9600
-  pinMode(trig,OUTPUT);   // chân trig sẽ phát tín hiệu
-  pinMode(echo,INPUT);    // chân echo sẽ nhận tín hiệu
-  
+  Serial.begin(9600);     // giao tiếp Serial với baudrate 9600
+  pinMode(trig, OUTPUT);  // chân trig sẽ phát tín hiệu
+  pinMode(echo, INPUT);   // chân echo sẽ nhận tín hiệu
+
   pinMode(RightMotorForward, OUTPUT);
   pinMode(LeftMotorForward, OUTPUT);
   pinMode(LeftMotorBackward, OUTPUT);
@@ -36,14 +36,15 @@ Serial.begin(9600);     // giao tiếp Serial với baudrate 9600
   delay(100);
   distance = readSensor();
   delay(100);
+
 }
 
 void loop() {
-  
+  Serial.flush();
   // put your main code here, to run repeatedly:
   distance = readSensor();
-  if(distance < 60){
-     moveStop();
+  if (distance < 60) {
+    moveStop();
     delay(300);
     moveBackward();
     delay(300);
@@ -53,48 +54,50 @@ void loop() {
     delay(2000);
     moveStop();
     delay(2500);
-  }else{
-      checkPeople = checkingPeople();
-      if(checkPeople == 1){
-         turnLeft();
-      delay(80);
+  } else {
+
+    checkPeople = checkingPeople();
+
+    if (checkPeople == 1) {
+      turnLeft();
+      delay(200);
       moveStop();
-      }else if(checkPeople == 2){
+    } else if (checkPeople == 2) {
       moveForward();
-      delay(80);
+      delay(2000);
       moveStop();
-      }else if(checkPeople == 3){
+    } else if (checkPeople == 3) {
       turnRight();
-      delay(80);
+      delay(200);
       moveStop();
-      }else{
-        moveStop();
-      }
+    } else {
+      moveStop();
+    }
   }
 }
 
-int readSensor(){
-    unsigned long duration; // biến đo thời gian
-    int distance;           // biến lưu khoảng cách
-    
-//    /* Phát xung từ chân trig */
-    digitalWrite(trig,0);   // tắt chân trig
-    delayMicroseconds(2);
-    digitalWrite(trig,1);   // phát xung từ chân trig
-    delayMicroseconds(5);   // xung có độ dài 5 microSeconds
-    digitalWrite(trig,0);   // tắt chân trig
-//    
-//    /* Tính toán thời gian */
-//    // Đo độ rộng xung HIGH ở chân echo. 
-    duration = pulseIn(echo,HIGH);  
-    // Tính khoảng cách đến vật.
-    distance = int(duration/2/29.412);
-//    
-//    /* In kết quả ra Serial Monitor */
-    Serial.print(distance);
-    Serial.println("cm");
-    delay(200);
-    return distance;
+int readSensor() {
+  unsigned long duration; // biến đo thời gian
+  int distance;           // biến lưu khoảng cách
+
+  //    /* Phát xung từ chân trig */
+  digitalWrite(trig, 0);  // tắt chân trig
+  delayMicroseconds(2);
+  digitalWrite(trig, 1);  // phát xung từ chân trig
+  delayMicroseconds(5);   // xung có độ dài 5 microSeconds
+  digitalWrite(trig, 0);  // tắt chân trig
+  //
+  //    /* Tính toán thời gian */
+  //    // Đo độ rộng xung HIGH ở chân echo.
+  duration = pulseIn(echo, HIGH);
+  // Tính khoảng cách đến vật.
+  distance = int(duration / 2 / 29.412);
+  //
+  //    /* In kết quả ra Serial Monitor */
+  Serial.print(distance);
+  Serial.println("cm");
+  delay(200);
+  return distance;
 }
 
 void moveStop()       // Move Stop Function for Motor Driver.
@@ -107,22 +110,22 @@ void moveStop()       // Move Stop Function for Motor Driver.
 }
 void moveForward()    // Move Forward Function for Motor Driver.
 {
- 
-    analogWrite(RightMotorForward, 200);
-    analogWrite(RightMotorBackward, 0);
-    analogWrite(LeftMotorForward, 200);
-    analogWrite(LeftMotorBackward, 0);
 
-    Serial.println("moveForward");
+  analogWrite(RightMotorForward, 200);
+  analogWrite(RightMotorBackward, 0);
+  analogWrite(LeftMotorForward, 200);
+  analogWrite(LeftMotorBackward, 0);
+
+  Serial.println("moveForward");
 }
 
 void moveBackward()   // Move Backward Function for Motor Driver.
 {
   //analogWrite(RightMotorForward, HIGH);
   analogWrite(RightMotorForward, 0);
-  analogWrite(RightMotorBackward, 0);
+  analogWrite(RightMotorBackward, 150);
   analogWrite(LeftMotorForward, 0);
-  analogWrite(LeftMotorBackward, 0);
+  analogWrite(LeftMotorBackward, 150);
   //analogWrite(RightMotorForward, HIGH);
   Serial.println("moveBackward");
 }
@@ -144,7 +147,7 @@ void turnLeft()       // Turn Left Function for Motor Driver.
   Serial.println("turnLeft");
   //Serial.print(checkcam);
   //delay(3500);
- analogWrite(RightMotorForward, 155);
+  analogWrite(RightMotorForward, 155);
   analogWrite(RightMotorBackward, 0);
   analogWrite(LeftMotorForward, 0);
   analogWrite(LeftMotorBackward, 155);
@@ -152,39 +155,36 @@ void turnLeft()       // Turn Left Function for Motor Driver.
 
 }
 
-int checkingPeople(){
+int checkingPeople() {
+
+  Serial.print("Turn into checkingPeople: ");
   int ans = 10;
-  while(!Serial.available()) {return 10;}
   // serial read section
   while (Serial.available())
   {
-    if (Serial.available() >0)
-    {
-      String c = Serial.readString();  //gets one byte from serial buffer
+    Serial.print("pass");
+    if (Serial.available() == 2) {
+      Serial.print("Turn into received: ");
+      String c = Serial.readStringUntil('\n');  //gets one byte from serial buffer
+      Serial.print("end received: ");
       readString = c; //makes the string readString
+      Serial.print("Arduino received: ");
+//      ans = readString.charAt(0) - '0';
+//      Serial.println(ans);
+//      Serial.flush();
+//      check = ans;
+//      sendingMessage(ans);
+      return c.charAt(0) - '0';
     }
+    String c = Serial.readStringUntil('\n'); 
+
   }
+//  Serial.flush();
+//  Serial.print(Serial.available());
+//  Serial.setTimeout(10);
 
-  if (readString.length() >0)
-  {
-    Serial.print("Arduino received: ");  
-     ans = readString.charAt(0) - '0';
-    Serial.println(ans); //see what was received
-  }else{
-    return 10;
-  }
 
-  delay(500);
+    return ans;
 
-  // serial write section
-
-  char ard_sends = '1';
-  Serial.print("Arduino sends: ");
-  //Serial.println(ard_sends);
-  Serial.print("\n");
-  Serial.flush();
   
-  Serial.println(ans);
-  delay(2000);
-  return ans;
 }
