@@ -36,14 +36,16 @@ void setup() {
   delay(100);
   distance = readSensor();
   delay(100);
+  checkPeople = checkingPeople();
 
 }
 
 void loop() {
   Serial.flush();
+  checkPeople = checkingPeople();
   // put your main code here, to run repeatedly:
   distance = readSensor();
-  if (distance < 60) {
+  if (distance < 100 && checkPeople == 10) {
     moveStop();
     delay(300);
     moveBackward();
@@ -54,9 +56,7 @@ void loop() {
     delay(2000);
     moveStop();
     delay(2500);
-  } else {
-
-    checkPeople = checkingPeople();
+  } else {    
 
     if (checkPeople == 1) {
       turnLeft();
@@ -108,7 +108,7 @@ void moveStop()       // Move Stop Function for Motor Driver.
   digitalWrite(LeftMotorBackward, LOW);
   Serial.println("moveStop");
 }
-void moveForward()    // Move Forward Function for Motor Driver.
+void moveBackward()    // Move Forward Function for Motor Driver.
 {
 
   analogWrite(RightMotorForward, 200);
@@ -116,26 +116,26 @@ void moveForward()    // Move Forward Function for Motor Driver.
   analogWrite(LeftMotorForward, 200);
   analogWrite(LeftMotorBackward, 0);
 
-  Serial.println("moveForward");
+  Serial.println("moveBackward");
 }
 
-void moveBackward()   // Move Backward Function for Motor Driver.
+void moveForward()   // Move Backward Function for Motor Driver.
 {
   //analogWrite(RightMotorForward, HIGH);
   analogWrite(RightMotorForward, 0);
-  analogWrite(RightMotorBackward, 150);
+  analogWrite(RightMotorBackward, 200);
   analogWrite(LeftMotorForward, 0);
-  analogWrite(LeftMotorBackward, 150);
+  analogWrite(LeftMotorBackward, 200);
   //analogWrite(RightMotorForward, HIGH);
-  Serial.println("moveBackward");
+  Serial.println("moveForward");
 }
 
 void turnRight()      // Turn Right Function for Motor Driver.
 {
   //delay(3500);
   analogWrite(RightMotorForward, 0);
-  analogWrite(RightMotorBackward, 155);
-  analogWrite(LeftMotorForward, 155);
+  analogWrite(RightMotorBackward, 200);
+  analogWrite(LeftMotorForward, 200);
   analogWrite(LeftMotorBackward, 0);
   delay(300);
   Serial.println(" turnRight-----------  ");
@@ -147,10 +147,10 @@ void turnLeft()       // Turn Left Function for Motor Driver.
   Serial.println("turnLeft");
   //Serial.print(checkcam);
   //delay(3500);
-  analogWrite(RightMotorForward, 155);
+  analogWrite(RightMotorForward, 200);
   analogWrite(RightMotorBackward, 0);
   analogWrite(LeftMotorForward, 0);
-  analogWrite(LeftMotorBackward, 155);
+  analogWrite(LeftMotorBackward, 200);
   delay(300);
 
 }
@@ -182,8 +182,15 @@ int checkingPeople() {
 //  Serial.flush();
 //  Serial.print(Serial.available());
 //  Serial.setTimeout(10);
-
-
+//  
+//  
+//    String c = Serial.readStringUntil('\n');  //gets one byte from serial buffer
+//  Serial.print("end received: ");
+//  Serial.print(c);
+//  readString = c; 
+   
+  
+//  return c.charAt(0) - '0';
     return ans;
 
   
